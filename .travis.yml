@@ -1,0 +1,25 @@
+dist: bionic
+
+language: go
+
+env: GO111MODULE=on
+
+# You don't need to test on very old versions of the Go compiler. It's the user's
+# responsibility to keep their compiler up to date.
+go:
+  - 1.13.x
+
+# Only clone the most recent commit.
+git:
+  depth: 1
+
+# Skip the install step. Don't `go get` dependencies. Only build with the code
+# in vendor/
+install: true
+
+# Don't email me the results of the test runs.
+notifications:
+  email: false
+
+script:
+  - go test -v -race ./...  # Run all the tests with the race detector enabled
