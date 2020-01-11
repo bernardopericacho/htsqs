@@ -4,10 +4,10 @@ import (
 	"errors"
 	"log"
 	"os"
+	"sync"
 	"sync/atomic"
 	"time"
 
-	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/sqs"
 	"github.com/jpillora/backoff"
@@ -22,13 +22,16 @@ const (
 
 	// defaultWaitTimeoutSeconds the duration (in seconds) for which the call waits for a message to arrive
 	// in the queue before returning. If a message is available, the call returns
-	// sooner than WaitTimeSeconds. If no messages are available and the wait time
+	// sooner than TimeSeconds. If no messages are available and the wait time
 	// expires, the call returns successfully with an empty list of messages.
 	defaultWaitTimeoutSeconds int64 = 10
 
 	// defaultVisibilityTimeout The duration (in seconds) that the received messages are hidden from subsequent
 	// retrieve requests after being retrieved by a ReceiveMessage request.
 	defaultVisibilityTimeout int64 = 30
+
+	// defaultNumConsumers is the number of consumers per subscriber
+	defaultNumConsumers int = 3
 )
 
 type atomicBool int32
@@ -57,31 +60,32 @@ type Logger interface {
 
 // SubscriberConfig holds the info required to work with Amazon SQS and Quid integrations
 type SubscriberConfig struct {
-	SqsEndpoint         string
-	SqsQueueUrl         string
+
+	// SQS service endpoint. Normally overridden for testing only
+	SqsEndpoint string
+
+	// SQS queue from which the subscriber is going to consume from
+	SqsQueueUrl string
+
+	// number of messages the subscriber will attempt to fetch on each receive.
 	MaxMessagesPerBatch int64
-	TimeoutSeconds      int64
-	VisibilityTimeout   int64
-	Logger              Logger
-}
 
-// sqsMessage is the SQS implementation of `SubscriberMessage`.
-type sqsMessage struct {
-	sub     *Subscriber
-	message *sqs.Message
-}
+	// the duration (in seconds) for which the call waits for a message to arrive
+	// in the queue before returning. If a message is available, the call returns
+	// sooner than TimeSeconds. If no messages are available and the wait time
+	// expires, the call returns successfully with an empty list of messages.
+	TimeoutSeconds int64
 
-func (m *sqsMessage) Message() []byte {
-	return []byte(*m.message.Body)
-}
+	// The duration (in seconds) that the received messages are hidden from subsequent
+	// retrieve requests after being retrieved by a ReceiveMessage request.
+	// VisibilityTimeout should be < time needed to process a message
+	VisibilityTimeout int64
 
-func (m *sqsMessage) Done() error {
-	deleteParams := &sqs.DeleteMessageInput{
-		QueueUrl:      aws.String(m.sub.cfg.SqsQueueUrl),
-		ReceiptHandle: m.message.ReceiptHandle,
-	}
-	_, err := m.sub.sqs.DeleteMessage(deleteParams)
-	return err
+	// number of consumers per subscriber
+	NumConsumers int
+
+	// subscriber logger
+	Logger Logger
 }
 
 // Subscriber is an SQS client that allows a user to
@@ -107,49 +111,65 @@ func (s *Subscriber) Consume() (<-chan transport.SubscriberMessage, <-chan error
 		return nil, nil, errors.New("sqs subscriber is already running")
 	}
 
-	messages := make(chan transport.SubscriberMessage, s.cfg.MaxMessagesPerBatch)
-	errCh := make(chan error, 1)
+	var wg sync.WaitGroup
+	var messages chan transport.SubscriberMessage
+	var errCh chan error
 
-	backoffCounter := &backoff.Backoff{
+	messages = make(chan transport.SubscriberMessage, s.cfg.MaxMessagesPerBatch)
+	errCh = make(chan error, 1)
+
+	backoffCounter := backoff.Backoff{
 		Factor: 1,
 		Min:    time.Second,
 		Max:    30 * time.Second,
 		Jitter: true,
 	}
 
-	go func() {
-		defer close(messages)
-		defer close(errCh)
-		var msgs *sqs.ReceiveMessageOutput
-		var err error
-		for !s.stopped.isSet() {
-			msgs, err = s.sqs.ReceiveMessage(&sqs.ReceiveMessageInput{
-				MaxNumberOfMessages: &s.cfg.MaxMessagesPerBatch,
-				QueueUrl:            &s.cfg.SqsQueueUrl,
-				WaitTimeSeconds:     &s.cfg.TimeoutSeconds,
-				VisibilityTimeout:   &s.cfg.VisibilityTimeout,
-			})
+	for i := 1; i <= s.cfg.NumConsumers; i++ {
+		wg.Add(1)
+		go func(workerID int, backoffCfg backoff.Backoff) {
+			s.cfg.Logger.Printf("Consumer %d listening for messages", workerID)
+			defer wg.Done()
 
-			if err != nil {
-				// Error found, send the error
-				errCh <- err
-				time.Sleep(backoffCounter.Duration())
-				continue
-			}
+			var msgs *sqs.ReceiveMessageOutput
+			var err error
 
-			s.cfg.Logger.Printf("Found %d messages\n", len(msgs.Messages))
-			backoffCounter.Reset()
-			// for each message, pass to output
-			for _, msg := range msgs.Messages {
-				messages <- &sqsMessage{
-					sub:     s,
-					message: msg,
+			for !s.stopped.isSet() {
+				msgs, err = s.sqs.ReceiveMessage(&sqs.ReceiveMessageInput{
+					MaxNumberOfMessages: &s.cfg.MaxMessagesPerBatch,
+					QueueUrl:            &s.cfg.SqsQueueUrl,
+					WaitTimeSeconds:     &s.cfg.TimeoutSeconds,
+					VisibilityTimeout:   &s.cfg.VisibilityTimeout,
+				})
+
+				if err != nil {
+					// Error found, send the error
+					errCh <- err
+					time.Sleep(backoffCfg.Duration())
+					continue
+				}
+
+				s.cfg.Logger.Printf("Found %d messages\n", len(msgs.Messages))
+				backoffCfg.Reset()
+				// for each message, pass to output
+				for _, msg := range msgs.Messages {
+					messages <- &sqsMessage{
+						sub:     s,
+						message: msg,
+					}
 				}
 			}
-		}
+		}(i, backoffCounter)
+	}
+
+	go func() {
+		wg.Wait()
+		close(messages)
+		close(errCh)
 		s.stop <- nil
 		close(s.stop)
 	}()
+
 	s.cfg.Logger.Printf("SQS subscriber listening for messages\n")
 	return messages, errCh, nil
 }
@@ -173,6 +193,10 @@ func defaultSubscriberConfig(cfg *SubscriberConfig) {
 
 	if cfg.VisibilityTimeout == 0 {
 		cfg.VisibilityTimeout = defaultVisibilityTimeout
+	}
+
+	if cfg.NumConsumers == 0 {
+		cfg.NumConsumers = defaultNumConsumers
 	}
 
 	if cfg.Logger == nil {

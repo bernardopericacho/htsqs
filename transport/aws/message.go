@@ -1,32 +1,24 @@
 package aws
 
 import (
-	"encoding/json"
-	"strconv"
-	"time"
+	"github.com/aws/aws-sdk-go/service/sqs"
 )
 
-// SqsJSONMessage is the SQS message response in JSON format
-// Message is processed as json.RawMessage for later use
-type SqsJSONMessage struct {
-	MessageID string          `json:"MessageId"`
-	Type      string          `json:"Type"`
-	Timestamp time.Time       `json:"Timestamp"`
-	Message   json.RawMessage `json:"Message"`
-	TopicArn  string          `json:"TopicArn"`
+// sqsMessage is the SQS implementation of `SubscriberMessage`.
+type sqsMessage struct {
+	sub     *Subscriber
+	message *sqs.Message
 }
 
-// UnmarshalJSON allows Node to implement the json.Unmarshaler interface and
-// unmarshal itself from a json structure
-func (sjm *SqsJSONMessage) UnmarshalJSON(b []byte) (err error) {
-	type Alias SqsJSONMessage
-	v := &Alias{}
-	err = json.Unmarshal(b, v)
+func (m *sqsMessage) Message() []byte {
+	return []byte(*m.message.Body)
+}
 
-	m, err := strconv.Unquote(string(v.Message))
-
-	*sjm = (SqsJSONMessage)(*v)
-	sjm.Message = json.RawMessage(m)
-
+func (m *sqsMessage) Done() error {
+	deleteParams := &sqs.DeleteMessageInput{
+		QueueUrl:      &m.sub.cfg.SqsQueueUrl,
+		ReceiptHandle: m.message.ReceiptHandle,
+	}
+	_, err := m.sub.sqs.DeleteMessage(deleteParams)
 	return err
 }
