@@ -4,20 +4,20 @@ import (
 	"github.com/aws/aws-sdk-go/service/sqs"
 )
 
-// sqsMessage is the SQS implementation of `SubscriberMessage`.
-type sqsMessage struct {
-	sub     *Subscriber
-	message *sqs.Message
+// SQSMessage is the SQS implementation of `SubscriberMessage`.
+type SQSMessage struct {
+	sub        *Subscriber
+	RawMessage *sqs.Message
 }
 
-func (m *sqsMessage) Message() []byte {
-	return []byte(*m.message.Body)
+func (m *SQSMessage) Message() []byte {
+	return []byte(*m.RawMessage.Body)
 }
 
-func (m *sqsMessage) Done() error {
+func (m *SQSMessage) Done() error {
 	deleteParams := &sqs.DeleteMessageInput{
 		QueueUrl:      &m.sub.cfg.SqsQueueUrl,
-		ReceiptHandle: m.message.ReceiptHandle,
+		ReceiptHandle: m.RawMessage.ReceiptHandle,
 	}
 	_, err := m.sub.sqs.DeleteMessage(deleteParams)
 	return err

@@ -11,7 +11,7 @@ import (
 	"github.com/aws/aws-sdk-go/service/sqs"
 	"github.com/stretchr/testify/require"
 
-	"htsqs/transport"
+	"github.com/bernardopericacho/htsqs/transport"
 )
 
 func TestSubscriber(t *testing.T) {
@@ -26,7 +26,7 @@ func TestSubscriber(t *testing.T) {
 	go func() {
 		for i := 0; i < numMessages; i++ {
 			message := fmt.Sprintf("Message: %d", i)
-			queue <- &sqsMessage{subs, &sqs.Message{Body: &message}}
+			queue <- &SQSMessage{subs, &sqs.Message{Body: &message}}
 		}
 		stopErrChannel <- subs.Stop()
 		close(stopErrChannel)

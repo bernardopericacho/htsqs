@@ -2,6 +2,7 @@ package aws
 
 import (
 	"errors"
+	"github.com/aws/aws-sdk-go/aws"
 	"log"
 	"os"
 	"sync"
@@ -12,7 +13,7 @@ import (
 	"github.com/aws/aws-sdk-go/service/sqs"
 	"github.com/jpillora/backoff"
 
-	"htsqs/transport"
+	"github.com/bernardopericacho/htsqs/transport"
 )
 
 const (
@@ -136,10 +137,11 @@ func (s *Subscriber) Consume() (<-chan transport.SubscriberMessage, <-chan error
 
 			for !s.stopped.isSet() {
 				msgs, err = s.sqs.ReceiveMessage(&sqs.ReceiveMessageInput{
-					MaxNumberOfMessages: &s.cfg.MaxMessagesPerBatch,
-					QueueUrl:            &s.cfg.SqsQueueUrl,
-					WaitTimeSeconds:     &s.cfg.TimeoutSeconds,
-					VisibilityTimeout:   &s.cfg.VisibilityTimeout,
+					MessageAttributeNames: []*string{aws.String(sqs.QueueAttributeNameAll)},
+					MaxNumberOfMessages:   &s.cfg.MaxMessagesPerBatch,
+					QueueUrl:              &s.cfg.SqsQueueUrl,
+					WaitTimeSeconds:       &s.cfg.TimeoutSeconds,
+					VisibilityTimeout:     &s.cfg.VisibilityTimeout,
 				})
 
 				if err != nil {
@@ -153,9 +155,9 @@ func (s *Subscriber) Consume() (<-chan transport.SubscriberMessage, <-chan error
 				backoffCfg.Reset()
 				// for each message, pass to output
 				for _, msg := range msgs.Messages {
-					messages <- &sqsMessage{
-						sub:     s,
-						message: msg,
+					messages <- &SQSMessage{
+						sub:        s,
+						RawMessage: msg,
 					}
 				}
 			}
