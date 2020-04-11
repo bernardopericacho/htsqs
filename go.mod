@@ -1,4 +1,4 @@
-module htsqs
+module github.com/bernardopericacho/htsqs
 
 go 1.13
 

@@ -9,7 +9,7 @@ type Subscriber interface {
 }
 
 // SubscriberMessage is an interface to encapsulate subscriber messages and provide
-//a mechanism for acknowledging messages once they've been processed.
+// a mechanism for acknowledging messages once they've been processed.
 type SubscriberMessage interface {
 	Message() []byte
 	Done() error
