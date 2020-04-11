@@ -3,7 +3,7 @@ package aws
 import (
 	"github.com/aws/aws-sdk-go/service/sqs"
 
-	"htsqs/transport"
+	"github.com/bernardopericacho/htsqs/transport"
 )
 
 type sqsMock struct {
