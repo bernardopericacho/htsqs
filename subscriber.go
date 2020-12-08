@@ -1,4 +1,4 @@
-package aws
+package htsqs
 
 import (
 	"errors"
@@ -12,8 +12,6 @@ import (
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/sqs"
 	"github.com/jpillora/backoff"
-
-	"github.com/bernardopericacho/htsqs/transport"
 )
 
 const (
@@ -66,7 +64,7 @@ type SubscriberConfig struct {
 	SqsEndpoint string
 
 	// SQS queue from which the subscriber is going to consume from
-	SqsQueueUrl string
+	SqsQueueURL string
 
 	// number of messages the subscriber will attempt to fetch on each receive.
 	MaxMessagesPerBatch int64
@@ -103,7 +101,7 @@ type Subscriber struct {
 
 // Consume starts consuming messages from the SQS queue.
 // Returns a channel of SubscriberMessage to consume them and a channel of errors
-func (s *Subscriber) Consume() (<-chan transport.SubscriberMessage, <-chan error, error) {
+func (s *Subscriber) Consume() (<-chan *SQSMessage, <-chan error, error) {
 	if s.stopped.isSet() {
 		return nil, nil, errors.New("sqs subscriber is already stopped")
 	}
@@ -113,10 +111,10 @@ func (s *Subscriber) Consume() (<-chan transport.SubscriberMessage, <-chan error
 	}
 
 	var wg sync.WaitGroup
-	var messages chan transport.SubscriberMessage
+	var messages chan *SQSMessage
 	var errCh chan error
 
-	messages = make(chan transport.SubscriberMessage, s.cfg.MaxMessagesPerBatch)
+	messages = make(chan *SQSMessage, s.cfg.MaxMessagesPerBatch)
 	errCh = make(chan error, 1)
 
 	backoffCounter := backoff.Backoff{
@@ -139,7 +137,7 @@ func (s *Subscriber) Consume() (<-chan transport.SubscriberMessage, <-chan error
 				msgs, err = s.sqs.ReceiveMessage(&sqs.ReceiveMessageInput{
 					MessageAttributeNames: []*string{aws.String(sqs.QueueAttributeNameAll)},
 					MaxNumberOfMessages:   &s.cfg.MaxMessagesPerBatch,
-					QueueUrl:              &s.cfg.SqsQueueUrl,
+					QueueUrl:              &s.cfg.SqsQueueURL,
 					WaitTimeSeconds:       &s.cfg.TimeoutSeconds,
 					VisibilityTimeout:     &s.cfg.VisibilityTimeout,
 				})
@@ -206,7 +204,7 @@ func defaultSubscriberConfig(cfg *SubscriberConfig) {
 	}
 }
 
-// NewSubscriber creates a new sqs subscriber
+// NewSubscriber creates a new AWS SQS subscriber
 func NewSubscriber(sess *session.Session, cfg SubscriberConfig) *Subscriber {
 	defaultSubscriberConfig(&cfg)
 	return &Subscriber{cfg: cfg, sqs: sqs.New(sess), stop: make(chan error, 1)}

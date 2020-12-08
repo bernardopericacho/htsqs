@@ -1,4 +1,4 @@
-package aws
+package htsqs
 
 import (
 	"fmt"
@@ -10,13 +10,11 @@ import (
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/sqs"
 	"github.com/stretchr/testify/require"
-
-	"github.com/bernardopericacho/htsqs/transport"
 )
 
 func TestSubscriber(t *testing.T) {
 	numMessages := 10
-	queue := make(chan transport.SubscriberMessage)
+	queue := make(chan *SQSMessage)
 	defer close(queue)
 	subs := NewSubscriber(session.Must(session.NewSession()), SubscriberConfig{})
 	subs.sqs = &sqsMock{queue: queue}
