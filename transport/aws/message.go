@@ -10,10 +10,12 @@ type SQSMessage struct {
 	RawMessage *sqs.Message
 }
 
+// Message returns the body of the SQS message in bytes
 func (m *SQSMessage) Message() []byte {
 	return []byte(*m.RawMessage.Body)
 }
 
+// Done deletes the message from SQS.
 func (m *SQSMessage) Done() error {
 	deleteParams := &sqs.DeleteMessageInput{
 		QueueUrl:      &m.sub.cfg.SqsQueueUrl,

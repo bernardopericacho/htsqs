@@ -2,13 +2,13 @@ package aws
 
 import (
 	"errors"
-	"github.com/aws/aws-sdk-go/aws"
 	"log"
 	"os"
 	"sync"
 	"sync/atomic"
 	"time"
 
+	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/sqs"
 	"github.com/jpillora/backoff"
@@ -59,7 +59,7 @@ type Logger interface {
 	Printf(string, ...interface{})
 }
 
-// SubscriberConfig holds the info required to work with Amazon SQS and Quid integrations
+// SubscriberConfig holds the info required to work with Amazon SQS
 type SubscriberConfig struct {
 
 	// SQS service endpoint. Normally overridden for testing only
