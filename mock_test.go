@@ -1,13 +1,11 @@
-package aws
+package htsqs
 
 import (
 	"github.com/aws/aws-sdk-go/service/sqs"
-
-	"github.com/bernardopericacho/htsqs/transport"
 )
 
 type sqsMock struct {
-	queue <-chan transport.SubscriberMessage
+	queue <-chan *SQSMessage
 }
 
 func (s *sqsMock) ReceiveMessage(*sqs.ReceiveMessageInput) (*sqs.ReceiveMessageOutput, error) {

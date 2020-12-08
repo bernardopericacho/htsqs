@@ -1,4 +1,4 @@
-package aws
+package htsqs
 
 import (
 	"github.com/aws/aws-sdk-go/service/sqs"
@@ -18,7 +18,7 @@ func (m *SQSMessage) Message() []byte {
 // Done deletes the message from SQS.
 func (m *SQSMessage) Done() error {
 	deleteParams := &sqs.DeleteMessageInput{
-		QueueUrl:      &m.sub.cfg.SqsQueueUrl,
+		QueueUrl:      &m.sub.cfg.SqsQueueURL,
 		ReceiptHandle: m.RawMessage.ReceiptHandle,
 	}
 	_, err := m.sub.sqs.DeleteMessage(deleteParams)
