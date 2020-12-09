@@ -11,10 +11,12 @@ HTSQS is a high throughput golang AWS SQS consumer.
 ## Features
 
 * **High throughput** - ability multiple consumers that concurrently receive messages from AWS SQS and push them into a single channel for consumption
-* **Late ACK** - mechanism for acknowledging messages once they've been processed
+* **Late ACK** - mechanism for acknowledging messages once they have been processed
+* **Message visibility** modify message visibility
 * **Error processing** - error processing to decide whether to stop consuming and exponential backoff setup when errors occur
 * **Graceful shutdown**
 
 ## License
+
 This project is licensed under [MIT License](./LICENSE).
 

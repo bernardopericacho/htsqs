@@ -7,6 +7,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/sqs"
 	"github.com/stretchr/testify/require"
@@ -35,22 +36,23 @@ func TestSubscriber(t *testing.T) {
 
 	// try to start consuming again while we are still consuming
 	_, _, err = subs.Consume()
-	require.EqualError(t, err, "sqs subscriber is already running")
+	require.EqualError(t, err, "SQS subscriber is already running")
 
 	i := 0
 	for m := range messages {
 		require.True(t, strings.HasPrefix(string(m.Message()), "Message: "))
+		require.NoError(t, m.ChangeMessageVisibility(aws.Int64(43200)))
 		require.NoError(t, m.Done())
 		i++
 	}
 	require.NoError(t, <-stopErrChannel)
 	require.NoError(t, <-errch)
 	require.Equal(t, numMessages, i)
-	require.EqualError(t, subs.Stop(), "sqs subscriber is already stopped")
+	require.EqualError(t, subs.Stop(), "SQS subscriber is already stopped")
 
 	// try to start consuming again when the consumer has already been used
 	_, _, err = subs.Consume()
-	require.EqualError(t, err, "sqs subscriber is already stopped")
+	require.EqualError(t, err, "SQS subscriber is already stopped")
 }
 
 func TestSubscriberDefaults(t *testing.T) {

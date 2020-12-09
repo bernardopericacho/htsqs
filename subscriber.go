@@ -50,6 +50,7 @@ func (b *atomicBool) setTrue() error {
 type receiver interface {
 	ReceiveMessage(*sqs.ReceiveMessageInput) (*sqs.ReceiveMessageOutput, error)
 	DeleteMessage(*sqs.DeleteMessageInput) (*sqs.DeleteMessageOutput, error)
+	ChangeMessageVisibility(params *sqs.ChangeMessageVisibilityInput) (*sqs.ChangeMessageVisibilityOutput, error)
 }
 
 // Logger interface allows to use other loggers than standard log.Logger
@@ -103,11 +104,11 @@ type Subscriber struct {
 // Returns a channel of SubscriberMessage to consume them and a channel of errors
 func (s *Subscriber) Consume() (<-chan *SQSMessage, <-chan error, error) {
 	if s.stopped.isSet() {
-		return nil, nil, errors.New("sqs subscriber is already stopped")
+		return nil, nil, errors.New("SQS subscriber is already stopped")
 	}
 
 	if s.consumed.setTrue() != nil {
-		return nil, nil, errors.New("sqs subscriber is already running")
+		return nil, nil, errors.New("SQS subscriber is already running")
 	}
 
 	var wg sync.WaitGroup
@@ -177,7 +178,7 @@ func (s *Subscriber) Consume() (<-chan *SQSMessage, <-chan error, error) {
 // Stop stop gracefully the Subscriber
 func (s *Subscriber) Stop() error {
 	if err := s.stopped.setTrue(); err != nil {
-		return errors.New("sqs subscriber is already stopped")
+		return errors.New("SQS subscriber is already stopped")
 	}
 	return <-s.stop
 }
