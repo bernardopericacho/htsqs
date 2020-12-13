@@ -61,9 +61,6 @@ type Logger interface {
 // SubscriberConfig holds the info required to work with Amazon SQS
 type SubscriberConfig struct {
 
-	// SQS service endpoint. Normally overridden for testing only
-	SqsEndpoint string
-
 	// SQS queue from which the subscriber is going to consume from
 	SqsQueueURL string
 
@@ -89,8 +86,8 @@ type SubscriberConfig struct {
 }
 
 // Subscriber is an SQS client that allows a user to
-// consume messages via the Subscriber interface.
-// Once Stop has been called on subscriber, it may not be reused;
+// consume messages from AWS SQS.
+// Once Stop has been called on subscriber, it might not be reused;
 // future calls to methods such as Consume or Stop will return an error.
 type Subscriber struct {
 	sqs      receiver
@@ -115,8 +112,8 @@ func (s *Subscriber) Consume() (<-chan *SQSMessage, <-chan error, error) {
 	var messages chan *SQSMessage
 	var errCh chan error
 
-	messages = make(chan *SQSMessage, s.cfg.MaxMessagesPerBatch)
-	errCh = make(chan error, 1)
+	messages = make(chan *SQSMessage, s.cfg.MaxMessagesPerBatch*int64(s.cfg.NumConsumers))
+	errCh = make(chan error, int64(s.cfg.NumConsumers))
 
 	backoffCounter := backoff.Backoff{
 		Factor: 1,

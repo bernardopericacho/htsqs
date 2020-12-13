@@ -26,7 +26,7 @@ func (m *SQSMessage) Done() error {
 }
 
 // ChangeMessageVisibility modifies current message visibility timeout to the one specified in the parameters.
-// This is normally useful when the message processing is taking more than the default visibility timeout
+// This is normally useful when the message processing is taking more time than the default visibility timeout
 func (m *SQSMessage) ChangeMessageVisibility(newVisibilityTimeout *int64) error {
 	changeVisibilityParams := &sqs.ChangeMessageVisibilityInput{
 		QueueUrl:          &m.sub.cfg.SqsQueueURL,
