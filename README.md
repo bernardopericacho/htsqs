@@ -18,22 +18,21 @@ HTSQS is a high throughput golang AWS SQS consumer.
 
 ## Getting started
 
-### Consume from an AWS SQS Queue 
+### Consume messages from an AWS SQS Queue 
 
 ```go
 package main
 
 import (
+    
 	"log"
-	
-    "github.com/aws/aws-sdk-go/aws/session"
-
+    
     "github.com/bernardopericacho/htsqs"
 )
 
 func main() {
     // Create a new subscriber, assuming we are configuring our credentials through environment variables
-    subs := htsqs.NewSubscriber(session.Must(session.NewSession()), htsqs.SubscriberConfig{SqsQueueURL: <MY_SQS_QUEUE_URL>})
+    subs := htsqs.NewSubscriber(htsqs.SubscriberConfig{SqsQueueURL: <MY_SQS_QUEUE_URL>})
     // Call consume
     messagesCh, errCh, err := subs.Consume()
     if err != nil {

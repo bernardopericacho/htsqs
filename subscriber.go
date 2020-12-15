@@ -61,6 +61,9 @@ type Logger interface {
 // SubscriberConfig holds the info required to work with Amazon SQS
 type SubscriberConfig struct {
 
+	// AWS session
+	AWSSession *session.Session
+
 	// SQS queue from which the subscriber is going to consume from
 	SqsQueueURL string
 
@@ -181,6 +184,10 @@ func (s *Subscriber) Stop() error {
 }
 
 func defaultSubscriberConfig(cfg *SubscriberConfig) {
+	if cfg.AWSSession == nil {
+		cfg.AWSSession = session.Must(session.NewSession())
+	}
+
 	if cfg.MaxMessagesPerBatch == 0 {
 		cfg.MaxMessagesPerBatch = defaultMaxMessagesPerBatch
 	}
@@ -203,7 +210,7 @@ func defaultSubscriberConfig(cfg *SubscriberConfig) {
 }
 
 // NewSubscriber creates a new AWS SQS subscriber
-func NewSubscriber(sess *session.Session, cfg SubscriberConfig) *Subscriber {
+func NewSubscriber(cfg SubscriberConfig) *Subscriber {
 	defaultSubscriberConfig(&cfg)
-	return &Subscriber{cfg: cfg, sqs: sqs.New(sess), stop: make(chan error, 1)}
+	return &Subscriber{cfg: cfg, sqs: sqs.New(cfg.AWSSession), stop: make(chan error, 1)}
 }
