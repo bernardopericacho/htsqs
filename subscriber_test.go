@@ -17,7 +17,7 @@ func TestSubscriber(t *testing.T) {
 	numMessages := 10
 	queue := make(chan *SQSMessage)
 	defer close(queue)
-	subs := NewSubscriber(session.Must(session.NewSession()), SubscriberConfig{})
+	subs := NewSubscriber(SubscriberConfig{})
 	subs.sqs = &sqsMock{queue: queue}
 
 	stopErrChannel := make(chan error)
@@ -64,7 +64,7 @@ func TestSubscriberDefaults(t *testing.T) {
 	}{
 		{
 			"Custom parameters",
-			SubscriberConfig{MaxMessagesPerBatch: 1, TimeoutSeconds: 1, VisibilityTimeout: 1, NumConsumers: 1, Logger: log.New(os.Stderr, "", log.LstdFlags)},
+			SubscriberConfig{AWSSession: session.Must(session.NewSession()), MaxMessagesPerBatch: 1, TimeoutSeconds: 1, VisibilityTimeout: 1, NumConsumers: 1, Logger: log.New(os.Stderr, "", log.LstdFlags)},
 			SubscriberConfig{MaxMessagesPerBatch: 1, TimeoutSeconds: 1, VisibilityTimeout: 1, NumConsumers: 1, Logger: log.New(os.Stderr, "", log.LstdFlags)},
 		},
 		{
@@ -77,11 +77,20 @@ func TestSubscriberDefaults(t *testing.T) {
 	for _, tc := range tt {
 		t.Run(tc.name, func(t *testing.T) {
 			// Check provided config is not modified
-			NewSubscriber(session.Must(session.NewSession()), tc.sqsConfig)
+			NewSubscriber(tc.sqsConfig)
 			require.Exactly(t, tc.sqsConfig, tc.sqsConfig)
 
 			// Check if defaults are properly calculated
+			initialAWSSession := tc.sqsConfig.AWSSession
 			defaultSubscriberConfig(&tc.sqsConfig)
+			// Check AWS session conf
+			if initialAWSSession == nil {
+				require.NotNil(t, tc.sqsConfig.AWSSession)
+				tc.sqsConfig.AWSSession = nil
+			} else {
+				require.Equal(t, initialAWSSession, tc.sqsConfig.AWSSession)
+				tc.expectedAfterDefaults.AWSSession = initialAWSSession
+			}
 			require.Exactly(t, tc.sqsConfig, tc.expectedAfterDefaults)
 
 		})
