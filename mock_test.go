@@ -5,18 +5,17 @@ import (
 )
 
 type sqsMock struct {
-	queue <-chan *SQSMessage
+	queue      <-chan *SQSMessage
+	errorQueue <-chan error
 }
 
 func (s *sqsMock) ReceiveMessage(*sqs.ReceiveMessageInput) (*sqs.ReceiveMessageOutput, error) {
 	select {
 	case message := <-s.queue:
-		if message == nil {
-			s.queue = nil
-			return &sqs.ReceiveMessageOutput{Messages: []*sqs.Message{}}, nil
-		}
 		stringMessage := string(message.Message())
 		return &sqs.ReceiveMessageOutput{Messages: []*sqs.Message{{Body: &stringMessage, ReceiptHandle: &stringMessage}}}, nil
+	case err := <-s.errorQueue:
+		return nil, err
 	default:
 		return &sqs.ReceiveMessageOutput{Messages: []*sqs.Message{}}, nil
 	}

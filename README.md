@@ -25,13 +25,14 @@ package main
 
 import (
     
-	"log"
+    "log"
     
     "github.com/bernardopericacho/htsqs"
 )
 
 func main() {
-    // Create a new subscriber, assuming we are configuring our credentials through environment variables
+    // Create a new subscriber, assuming we are configuring our credentials following 
+	// environment variables or IAM Roles: https://docs.aws.amazon.com/cli/latest/userguide/cli-chap-configure.html
     subs := htsqs.NewSubscriber(htsqs.SubscriberConfig{SqsQueueURL: <MY_SQS_QUEUE_URL>})
     // Call consume
     messagesCh, errCh, err := subs.Consume()
@@ -48,6 +49,40 @@ func main() {
         }
     }
 }
+```
+
+### Create a worker service to consume from a SQS queue
+
+```go
+package main
+
+import (
+    "context"
+    "fmt"
+    "log"
+
+    "github.com/bernardopericacho/htsqs"
+)
+
+func main() {
+    cfg := htsqs.WorkerConfig{
+		Subscriber: htsqs.NewSubscriber(htsqs.SubscriberConfig{
+			SqsQueueURL: "",
+		}),
+	}
+	
+	worker := htsqs.NewWorker(cfg)
+	ctx := context.Background()
+	if err := worker.Start(ctx); err != htsqs.ErrWorkerClosed {
+		stopErr := worker.Stop()
+		if stopErr != nil {
+			log.Printf("Worker start failed: %v\n", fmt.Errorf("%s: %w", stopErr.Error(), err))
+		} else {
+			log.Println("Worker start failed")
+		}
+	}
+}
+
 ```
 
 ## License
