@@ -175,7 +175,8 @@ func (s *Subscriber) Consume() (<-chan *SQSMessage, <-chan error, error) {
 	return messages, errCh, nil
 }
 
-// Stop stop gracefully the Subscriber
+// Stop stop gracefully the Subscriber.
+// Blocks until all consumers from the subscriber are gracefully stopped
 func (s *Subscriber) Stop() error {
 	if err := s.stopped.setTrue(); err != nil {
 		return errors.New("SQS subscriber is already stopped")
