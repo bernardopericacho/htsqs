@@ -34,10 +34,6 @@ func TestSubscriber(t *testing.T) {
 	messages, errch, err := subs.Consume()
 	require.NoError(t, err)
 
-	// try to start consuming again while we are still consuming
-	_, _, err = subs.Consume()
-	require.EqualError(t, err, "SQS subscriber is already running")
-
 	i := 0
 	for m := range messages {
 		require.True(t, strings.HasPrefix(string(m.Message()), "Message: "))
@@ -53,6 +49,45 @@ func TestSubscriber(t *testing.T) {
 	// try to start consuming again when the consumer has already been used
 	_, _, err = subs.Consume()
 	require.EqualError(t, err, "SQS subscriber is already stopped")
+}
+
+func TestSubscriberAlreadyRunning(t *testing.T) {
+	queue := make(chan *SQSMessage)
+	defer close(queue)
+	subs := NewSubscriber(SubscriberConfig{})
+	subs.sqs = &sqsMock{queue: queue}
+
+	errsChannelStart := make(chan error)
+	errsChannelStop := make(chan error)
+
+	stringMessage := fmt.Sprintf("Message")
+
+	go func() {
+		sqsMessage := SQSMessage{
+			sub: subs,
+			RawMessage: &sqs.Message{
+				Body: &stringMessage,
+			},
+		}
+
+		queue <- &sqsMessage
+
+		_, _, err := subs.Consume()
+		errsChannelStart <- err
+		close(errsChannelStart)
+
+		errsChannelStop <- subs.Stop()
+		close(errsChannelStop)
+	}()
+
+	messages, _, err := subs.Consume()
+	require.NoError(t, err)
+	m := <-messages
+	require.Equal(t, string(m.Message()), stringMessage)
+	require.NoError(t, m.Done())
+
+	require.EqualError(t, <-errsChannelStart, "SQS subscriber is already running")
+	require.Nil(t, <-errsChannelStop)
 }
 
 func TestSubscriberDefaults(t *testing.T) {
