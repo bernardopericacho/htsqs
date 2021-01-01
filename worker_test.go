@@ -80,8 +80,9 @@ func TestWorkerAlreadyRunning(t *testing.T) {
 }
 
 func TestWorkerError(t *testing.T) {
+
 	c := new(WorkerConfig)
-	errorQueue := make(chan error, 1)
+	errorQueue := make(chan error)
 	defer close(errorQueue)
 
 	subs := NewSubscriber(SubscriberConfig{})
@@ -89,19 +90,15 @@ func TestWorkerError(t *testing.T) {
 	c.Subscriber = subs
 	worker := NewWorker(*c)
 
-	errsChannelStop := make(chan error)
+	errsChannelStart := make(chan error)
+	go func() {
+		errsChannelStart <- worker.Start(context.Background())
+		close(errsChannelStart)
+	}()
 
 	AWSError := errors.New("AWS very bad error")
 	errorQueue <- AWSError
-
-	go func() {
-		// wait until first AWSError is consumed before stopping the worker
-		errorQueue <- AWSError
-		errsChannelStop <- worker.Stop()
-		close(errsChannelStop)
-	}()
-
-	require.EqualError(t, worker.Start(context.Background()), AWSError.Error())
-	require.NoError(t, <-errsChannelStop)
+	require.NoError(t, worker.Stop())
+	require.EqualError(t, <-errsChannelStart, AWSError.Error())
 
 }
