@@ -1,4 +1,4 @@
-package htsqs
+package subscriber
 
 import (
 	"context"

@@ -1,4 +1,4 @@
-package htsqs
+package subscriber
 
 import (
 	"fmt"
@@ -17,7 +17,7 @@ func TestSubscriber(t *testing.T) {
 	numMessages := 10
 	queue := make(chan *SQSMessage)
 	defer close(queue)
-	subs := NewSubscriber(SubscriberConfig{})
+	subs := New(Config{})
 	subs.sqs = &sqsMock{queue: queue}
 
 	stopErrChannel := make(chan error)
@@ -54,7 +54,7 @@ func TestSubscriber(t *testing.T) {
 func TestSubscriberAlreadyRunning(t *testing.T) {
 	queue := make(chan *SQSMessage)
 	defer close(queue)
-	subs := NewSubscriber(SubscriberConfig{})
+	subs := New(Config{})
 	subs.sqs = &sqsMock{queue: queue}
 
 	errsChannelStart := make(chan error)
@@ -65,7 +65,7 @@ func TestSubscriberAlreadyRunning(t *testing.T) {
 	go func() {
 		sqsMessage := SQSMessage{
 			sub: subs,
-			RawMessage: &sqs.Message{
+			rawMessage: &sqs.Message{
 				Body: &stringMessage,
 			},
 		}
@@ -94,25 +94,25 @@ func TestSubscriberDefaults(t *testing.T) {
 
 	tt := []struct {
 		name                  string
-		sqsConfig             SubscriberConfig
-		expectedAfterDefaults SubscriberConfig
+		sqsConfig             Config
+		expectedAfterDefaults Config
 	}{
 		{
 			"Custom parameters",
-			SubscriberConfig{AWSSession: session.Must(session.NewSession()), MaxMessagesPerBatch: 1, TimeoutSeconds: 1, VisibilityTimeout: 1, NumConsumers: 1, Logger: log.New(os.Stderr, "", log.LstdFlags)},
-			SubscriberConfig{MaxMessagesPerBatch: 1, TimeoutSeconds: 1, VisibilityTimeout: 1, NumConsumers: 1, Logger: log.New(os.Stderr, "", log.LstdFlags)},
+			Config{AWSSession: session.Must(session.NewSession()), MaxMessagesPerBatch: 1, TimeoutSeconds: 1, VisibilityTimeout: 1, NumConsumers: 1, Logger: log.New(os.Stderr, "", log.LstdFlags)},
+			Config{MaxMessagesPerBatch: 1, TimeoutSeconds: 1, VisibilityTimeout: 1, NumConsumers: 1, Logger: log.New(os.Stderr, "", log.LstdFlags)},
 		},
 		{
 			"Use defaults parameters",
-			SubscriberConfig{},
-			SubscriberConfig{MaxMessagesPerBatch: 10, TimeoutSeconds: 10, VisibilityTimeout: 30, NumConsumers: 3, Logger: log.New(os.Stdout, "", log.LstdFlags|log.LUTC)},
+			Config{},
+			Config{MaxMessagesPerBatch: 10, TimeoutSeconds: 10, VisibilityTimeout: 30, NumConsumers: 3, Logger: log.New(os.Stdout, "", log.LstdFlags|log.LUTC)},
 		},
 	}
 
 	for _, tc := range tt {
 		t.Run(tc.name, func(t *testing.T) {
 			// Check provided config is not modified
-			NewSubscriber(tc.sqsConfig)
+			New(tc.sqsConfig)
 			require.Exactly(t, tc.sqsConfig, tc.sqsConfig)
 
 			// Check if defaults are properly calculated

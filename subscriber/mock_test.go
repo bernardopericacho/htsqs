@@ -1,4 +1,4 @@
-package htsqs
+package subscriber
 
 import (
 	"github.com/aws/aws-sdk-go/service/sqs"

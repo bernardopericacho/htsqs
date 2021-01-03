@@ -1,4 +1,4 @@
-package htsqs
+package subscriber
 
 import (
 	"github.com/aws/aws-sdk-go/service/sqs"
@@ -7,19 +7,24 @@ import (
 // SQSMessage is the implementation of a SQS message
 type SQSMessage struct {
 	sub        *Subscriber
-	RawMessage *sqs.Message
+	rawMessage *sqs.Message
 }
 
 // Message returns the body of the SQS message in bytes
 func (m *SQSMessage) Message() []byte {
-	return []byte(*m.RawMessage.Body)
+	return []byte(*m.rawMessage.Body)
+}
+
+// MessageAttributes returns the message attributes
+func (m *SQSMessage) MessageAttributes() map[string]*sqs.MessageAttributeValue {
+	return m.rawMessage.MessageAttributes
 }
 
 // Done deletes the message from SQS.
 func (m *SQSMessage) Done() error {
 	deleteParams := &sqs.DeleteMessageInput{
 		QueueUrl:      &m.sub.cfg.SqsQueueURL,
-		ReceiptHandle: m.RawMessage.ReceiptHandle,
+		ReceiptHandle: m.rawMessage.ReceiptHandle,
 	}
 	_, err := m.sub.sqs.DeleteMessage(deleteParams)
 	return err
@@ -30,7 +35,7 @@ func (m *SQSMessage) Done() error {
 func (m *SQSMessage) ChangeMessageVisibility(newVisibilityTimeout *int64) error {
 	changeVisibilityParams := &sqs.ChangeMessageVisibilityInput{
 		QueueUrl:          &m.sub.cfg.SqsQueueURL,
-		ReceiptHandle:     m.RawMessage.ReceiptHandle,
+		ReceiptHandle:     m.rawMessage.ReceiptHandle,
 		VisibilityTimeout: newVisibilityTimeout,
 	}
 

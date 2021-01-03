@@ -1,4 +1,4 @@
-package htsqs
+package subscriber
 
 import (
 	"errors"
@@ -58,8 +58,8 @@ type Logger interface {
 	Printf(string, ...interface{})
 }
 
-// SubscriberConfig holds the info required to work with Amazon SQS
-type SubscriberConfig struct {
+// Config holds the info required to work with Amazon SQS
+type Config struct {
 
 	// AWS session
 	AWSSession *session.Session
@@ -94,7 +94,7 @@ type SubscriberConfig struct {
 // future calls to methods such as Consume or Stop will return an error.
 type Subscriber struct {
 	sqs      receiver
-	cfg      SubscriberConfig
+	cfg      Config
 	stopped  atomicBool
 	consumed atomicBool
 	stop     chan error
@@ -156,7 +156,7 @@ func (s *Subscriber) Consume() (<-chan *SQSMessage, <-chan error, error) {
 				for _, msg := range msgs.Messages {
 					messages <- &SQSMessage{
 						sub:        s,
-						RawMessage: msg,
+						rawMessage: msg,
 					}
 				}
 			}
@@ -184,7 +184,7 @@ func (s *Subscriber) Stop() error {
 	return <-s.stop
 }
 
-func defaultSubscriberConfig(cfg *SubscriberConfig) {
+func defaultSubscriberConfig(cfg *Config) {
 	if cfg.AWSSession == nil {
 		cfg.AWSSession = session.Must(session.NewSession())
 	}
@@ -210,8 +210,8 @@ func defaultSubscriberConfig(cfg *SubscriberConfig) {
 	}
 }
 
-// NewSubscriber creates a new AWS SQS subscriber
-func NewSubscriber(cfg SubscriberConfig) *Subscriber {
+// New creates a new AWS SQS subscriber
+func New(cfg Config) *Subscriber {
 	defaultSubscriberConfig(&cfg)
 	return &Subscriber{cfg: cfg, sqs: sqs.New(cfg.AWSSession), stop: make(chan error, 1)}
 }
