@@ -10,7 +10,7 @@ HTSQS is a high throughput golang AWS SQS consumer.
 
 ## Features
 
-* **High throughput** - ability to set multiple consumers that concurrently receive messages from AWS SQS and push them into a single channel for consumption
+* **High throughput** - a subscriber has the ability to create multiple consumers that concurrently receive messages from AWS SQS and push them into a single channel for consumption
 * **Late ACK** - mechanism for acknowledging messages once they have been processed
 * **Message visibility** modify message visibility
 * **Error processing** - error processing to decide whether to stop consuming and exponential backoff setup when errors occur
@@ -27,13 +27,13 @@ import (
     
     "log"
     
-    "github.com/bernardopericacho/htsqs"
+    "github.com/bernardopericacho/htsqs/subscriber"
 )
 
 func main() {
     // Create a new subscriber, assuming we are configuring our credentials following 
 	// environment variables or IAM Roles: https://docs.aws.amazon.com/cli/latest/userguide/cli-chap-configure.html
-    subs := htsqs.NewSubscriber(htsqs.SubscriberConfig{SqsQueueURL: <MY_SQS_QUEUE_URL>})
+    subs := subscriber.New(subscriber.Config{SqsQueueURL: <MY_SQS_QUEUE_URL>})
     // Call consume
     messagesCh, errCh, err := subs.Consume()
     if err != nil {
@@ -61,19 +61,19 @@ import (
     "fmt"
     "log"
 
-    "github.com/bernardopericacho/htsqs"
+    "github.com/bernardopericacho/htsqs/subscriber"
 )
 
 func main() {
-    cfg := htsqs.WorkerConfig{
-		Subscriber: htsqs.NewSubscriber(htsqs.SubscriberConfig{
+    cfg := subscriber.WorkerConfig{
+		Subscriber: subscriber.New(subscriber.Config{
 			SqsQueueURL: "",
 		}),
 	}
 	
-	worker := htsqs.NewWorker(cfg)
+	worker := subscriber.NewWorker(cfg)
 	ctx := context.Background()
-	if err := worker.Start(ctx); err != htsqs.ErrWorkerClosed {
+	if err := worker.Start(ctx); err != subscriber.ErrWorkerClosed {
 		stopErr := worker.Stop()
 		if stopErr != nil {
 			log.Printf("Worker start failed: %v\n", fmt.Errorf("%s: %w", stopErr.Error(), err))

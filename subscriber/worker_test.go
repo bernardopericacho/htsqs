@@ -1,12 +1,13 @@
-package htsqs
+package subscriber
 
 import (
 	"context"
 	"errors"
 	"fmt"
+	"testing"
+
 	"github.com/aws/aws-sdk-go/service/sqs"
 	"github.com/stretchr/testify/require"
-	"testing"
 )
 
 func TestWorker(t *testing.T) {
@@ -14,7 +15,7 @@ func TestWorker(t *testing.T) {
 
 	queue := make(chan *SQSMessage)
 	defer close(queue)
-	subs := NewSubscriber(SubscriberConfig{})
+	subs := New(Config{})
 	subs.sqs = &sqsMock{queue: queue}
 	c.Subscriber = subs
 	worker := NewWorker(*c)
@@ -28,7 +29,7 @@ func TestWorker(t *testing.T) {
 
 			queue <- &SQSMessage{
 				sub: subs,
-				RawMessage: &sqs.Message{
+				rawMessage: &sqs.Message{
 					Body: &message,
 				},
 			}
@@ -48,7 +49,7 @@ func TestWorkerAlreadyRunning(t *testing.T) {
 
 	queue := make(chan *SQSMessage)
 	defer close(queue)
-	subs := NewSubscriber(SubscriberConfig{})
+	subs := New(Config{})
 	subs.sqs = &sqsMock{queue: queue}
 	c.Subscriber = subs
 	worker := NewWorker(*c)
@@ -61,7 +62,7 @@ func TestWorkerAlreadyRunning(t *testing.T) {
 
 		queue <- &SQSMessage{
 			sub: subs,
-			RawMessage: &sqs.Message{
+			rawMessage: &sqs.Message{
 				Body: &message,
 			},
 		}
@@ -85,7 +86,7 @@ func TestWorkerError(t *testing.T) {
 	errorQueue := make(chan error)
 	defer close(errorQueue)
 
-	subs := NewSubscriber(SubscriberConfig{})
+	subs := New(Config{})
 	subs.sqs = &sqsMock{errorQueue: errorQueue}
 	c.Subscriber = subs
 	worker := NewWorker(*c)
