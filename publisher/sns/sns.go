@@ -46,9 +46,6 @@ func (p *Publisher) Publish(ctx context.Context, msg json.Marshaler) error {
 		TopicArn: &p.cfg.TopicArn,
 	}
 
-	if err := input.Validate(); err != nil {
-		return err
-	}
 	_, err = p.sns.PublishWithContext(ctx, input)
 
 	return err
