@@ -99,13 +99,13 @@ func TestSubscriberDefaults(t *testing.T) {
 	}{
 		{
 			"Custom parameters",
-			Config{AWSSession: session.Must(session.NewSession()), MaxMessagesPerBatch: 1, TimeoutSeconds: 1, VisibilityTimeout: 1, NumConsumers: 1, Logger: log.New(os.Stderr, "", log.LstdFlags)},
-			Config{MaxMessagesPerBatch: 1, TimeoutSeconds: 1, VisibilityTimeout: 1, NumConsumers: 1, Logger: log.New(os.Stderr, "", log.LstdFlags)},
+			Config{AWSSession: session.Must(session.NewSession()), MaxMessagesPerBatch: aws.Int64(1), TimeoutSeconds: aws.Int64(1), VisibilityTimeout: aws.Int64(1), NumConsumers: 1, Logger: log.New(os.Stderr, "", log.LstdFlags)},
+			Config{MaxMessagesPerBatch: aws.Int64(1), TimeoutSeconds: aws.Int64(1), VisibilityTimeout: aws.Int64(1), NumConsumers: 1, Logger: log.New(os.Stderr, "", log.LstdFlags)},
 		},
 		{
 			"Use defaults parameters",
 			Config{},
-			Config{MaxMessagesPerBatch: 10, TimeoutSeconds: 10, VisibilityTimeout: 30, NumConsumers: 3, Logger: log.New(os.Stdout, "", log.LstdFlags|log.LUTC)},
+			Config{MaxMessagesPerBatch: nil, TimeoutSeconds: nil, VisibilityTimeout: nil, NumConsumers: 3, Logger: log.New(os.Stdout, "", log.LstdFlags|log.LUTC)},
 		},
 	}
 
