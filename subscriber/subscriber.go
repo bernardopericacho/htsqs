@@ -15,20 +15,6 @@ import (
 )
 
 const (
-	// defaultMaxMessagesPerBatch is default the number of messages
-	// the subscriber will attempt to fetch on each receive.
-	defaultMaxMessagesPerBatch int64 = 10
-
-	// defaultWaitTimeoutSeconds the duration (in seconds) for which the call waits for a message to arrive
-	// in the queue before returning. If a message is available, the call returns
-	// sooner than TimeSeconds. If no messages are available and the wait time
-	// expires, the call returns successfully with an empty list of messages.
-	defaultWaitTimeoutSeconds int64 = 10
-
-	// defaultVisibilityTimeout The duration (in seconds) that the received messages are hidden from subsequent
-	// retrieve requests after being retrieved by a ReceiveMessage request.
-	defaultVisibilityTimeout int64 = 30
-
 	// defaultNumConsumers is the number of consumers per subscriber
 	defaultNumConsumers int = 3
 )
@@ -68,18 +54,18 @@ type Config struct {
 	SqsQueueURL string
 
 	// number of messages the subscriber will attempt to fetch on each receive.
-	MaxMessagesPerBatch int64
+	MaxMessagesPerBatch *int64
 
 	// the duration (in seconds) for which the call waits for a message to arrive
 	// in the queue before returning. If a message is available, the call returns
 	// sooner than TimeSeconds. If no messages are available and the wait time
 	// expires, the call returns successfully with an empty list of messages.
-	TimeoutSeconds int64
+	TimeoutSeconds *int64
 
 	// The duration (in seconds) that the received messages are hidden from subsequent
 	// retrieve requests after being retrieved by a ReceiveMessage request.
 	// VisibilityTimeout should be < time needed to process a message
-	VisibilityTimeout int64
+	VisibilityTimeout *int64
 
 	// number of consumers per subscriber
 	NumConsumers int
@@ -114,8 +100,14 @@ func (s *Subscriber) Consume() (<-chan *SQSMessage, <-chan error, error) {
 	var wg sync.WaitGroup
 	var messages chan *SQSMessage
 	var errCh chan error
+	var messagesPerBatchPerConsumer int64
 
-	messages = make(chan *SQSMessage, s.cfg.MaxMessagesPerBatch*int64(s.cfg.NumConsumers))
+	messagesPerBatchPerConsumer = 1
+	if s.cfg.MaxMessagesPerBatch != nil {
+		messagesPerBatchPerConsumer = *s.cfg.MaxMessagesPerBatch
+	}
+
+	messages = make(chan *SQSMessage, messagesPerBatchPerConsumer*int64(s.cfg.NumConsumers))
 	errCh = make(chan error, int64(s.cfg.NumConsumers))
 
 	backoffCounter := backoff.Backoff{
@@ -137,10 +129,10 @@ func (s *Subscriber) Consume() (<-chan *SQSMessage, <-chan error, error) {
 			for !s.stopped.isSet() {
 				msgs, err = s.sqs.ReceiveMessage(&sqs.ReceiveMessageInput{
 					MessageAttributeNames: []*string{aws.String(sqs.QueueAttributeNameAll)},
-					MaxNumberOfMessages:   &s.cfg.MaxMessagesPerBatch,
+					MaxNumberOfMessages:   s.cfg.MaxMessagesPerBatch,
 					QueueUrl:              &s.cfg.SqsQueueURL,
-					WaitTimeSeconds:       &s.cfg.TimeoutSeconds,
-					VisibilityTimeout:     &s.cfg.VisibilityTimeout,
+					WaitTimeSeconds:       s.cfg.TimeoutSeconds,
+					VisibilityTimeout:     s.cfg.VisibilityTimeout,
 				})
 
 				if err != nil {
@@ -187,18 +179,6 @@ func (s *Subscriber) Stop() error {
 func defaultSubscriberConfig(cfg *Config) {
 	if cfg.AWSSession == nil {
 		cfg.AWSSession = session.Must(session.NewSession())
-	}
-
-	if cfg.MaxMessagesPerBatch == 0 {
-		cfg.MaxMessagesPerBatch = defaultMaxMessagesPerBatch
-	}
-
-	if cfg.TimeoutSeconds == 0 {
-		cfg.TimeoutSeconds = defaultWaitTimeoutSeconds
-	}
-
-	if cfg.VisibilityTimeout == 0 {
-		cfg.VisibilityTimeout = defaultVisibilityTimeout
 	}
 
 	if cfg.NumConsumers == 0 {
