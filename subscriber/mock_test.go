@@ -12,7 +12,7 @@ type sqsMock struct {
 func (s *sqsMock) ReceiveMessage(*sqs.ReceiveMessageInput) (*sqs.ReceiveMessageOutput, error) {
 	select {
 	case message := <-s.queue:
-		stringMessage := string(message.Message())
+		stringMessage := string(message.Body())
 		return &sqs.ReceiveMessageOutput{Messages: []*sqs.Message{{Body: &stringMessage, ReceiptHandle: &stringMessage}}}, nil
 	case err := <-s.errorQueue:
 		return nil, err

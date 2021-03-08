@@ -10,8 +10,8 @@ type SQSMessage struct {
 	rawMessage *sqs.Message
 }
 
-// Message returns the body of the SQS message in bytes
-func (m *SQSMessage) Message() []byte {
+// Body returns the body of the SQS message in bytes
+func (m *SQSMessage) Body() []byte {
 	return []byte(*m.rawMessage.Body)
 }
 

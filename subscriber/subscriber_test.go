@@ -36,7 +36,7 @@ func TestSubscriber(t *testing.T) {
 
 	i := 0
 	for m := range messages {
-		require.True(t, strings.HasPrefix(string(m.Message()), "Message: "))
+		require.True(t, strings.HasPrefix(string(m.Body()), "Message: "))
 		require.NoError(t, m.ChangeMessageVisibility(aws.Int64(43200)))
 		require.NoError(t, m.Done())
 		i++
@@ -83,7 +83,7 @@ func TestSubscriberAlreadyRunning(t *testing.T) {
 	messages, _, err := subs.Consume()
 	require.NoError(t, err)
 	m := <-messages
-	require.Equal(t, string(m.Message()), stringMessage)
+	require.Equal(t, string(m.Body()), stringMessage)
 	require.NoError(t, m.Done())
 
 	require.EqualError(t, <-errsChannelStart, "SQS subscriber is already running")
