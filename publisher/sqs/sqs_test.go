@@ -21,7 +21,7 @@ func TestPublisher(t *testing.T) {
 	pubs.sqs = &sqsPublisherMock{queue: queue}
 
 	testString := jsonString(`{"msg":"message"}`)
-	require.NoError(t, pubs.Publish(context.Background(), testString))
+	require.NoError(t, pubs.Publish(context.TODO(), testString))
 	publishedMessage := <-queue
 	require.Equal(t, *publishedMessage, `{"msg":"message"}`)
 }

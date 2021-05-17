@@ -10,7 +10,7 @@ import (
 var ErrWorkerClosed = errors.New("worker closed")
 
 func defaultMessageHandler(ctx context.Context, w *Worker, m *SQSMessage) {
-	log.Printf("Message received: '%s'", string(m.Message()))
+	log.Printf("Message received: '%s'", string(m.Body()))
 	if err := m.Done(); err != nil {
 		log.Printf("Error when deleting message from SQS: %v", err)
 	}

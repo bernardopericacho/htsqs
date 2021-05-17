@@ -38,10 +38,10 @@ func TestWorker(t *testing.T) {
 		close(errsChannelStop)
 	}()
 
-	require.Equal(t, ErrWorkerClosed, worker.Start(context.Background()))
+	require.Equal(t, ErrWorkerClosed, worker.Start(context.TODO()))
 	require.NoError(t, <-errsChannelStop)
 	require.EqualError(t, worker.Stop(), "SQS subscriber is already stopped")
-	require.EqualError(t, worker.Start(context.Background()), "SQS subscriber is already stopped")
+	require.EqualError(t, worker.Start(context.TODO()), "SQS subscriber is already stopped")
 }
 
 func TestWorkerAlreadyRunning(t *testing.T) {
@@ -71,11 +71,11 @@ func TestWorkerAlreadyRunning(t *testing.T) {
 	}()
 
 	go func() {
-		errsChannelStart <- worker.Start(context.Background())
+		errsChannelStart <- worker.Start(context.TODO())
 		close(errsChannelStart)
 	}()
 
-	require.Equal(t, ErrWorkerClosed, worker.Start(context.Background()))
+	require.Equal(t, ErrWorkerClosed, worker.Start(context.TODO()))
 	require.EqualError(t, <-errsChannelStart, "SQS subscriber is already running")
 	require.NoError(t, <-errsChannelStop)
 }
@@ -93,7 +93,7 @@ func TestWorkerError(t *testing.T) {
 
 	errsChannelStart := make(chan error)
 	go func() {
-		errsChannelStart <- worker.Start(context.Background())
+		errsChannelStart <- worker.Start(context.TODO())
 		close(errsChannelStart)
 	}()
 

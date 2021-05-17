@@ -2,7 +2,7 @@
 
 [![Latest Version](http://img.shields.io/github/v/release/bernardopericacho/htsqs.svg)](https://github.com/bernardopericacho/htsqs/releases) [![PkgGoDev](https://pkg.go.dev/badge/golang.org/x/tools)](https://pkg.go.dev/github.com/bernardopericacho/htsqs) [![Build Status](https://travis-ci.com/bernardopericacho/htsqs.svg?branch=master)](https://travis-ci.com/bernardopericacho/htsqs)
 
-HTSQS is a high throughput golang AWS SQS consumer.
+HTSQS is a high throughput golang AWS SQS consumer and SNS/SQS message publisher.
 
 ## Install
 
@@ -72,7 +72,7 @@ func main() {
 	}
 	
 	worker := subscriber.NewWorker(cfg)
-	ctx := context.Background()
+	ctx := context.TODO()
 	if err := worker.Start(ctx); err != subscriber.ErrWorkerClosed {
 		stopErr := worker.Stop()
 		if stopErr != nil {
